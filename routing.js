@@ -1,5 +1,6 @@
-http = require('http')
-querystring = require('querystring')
+const http = require('http')
+const querystring = require('querystring')
+const fs = require('fs')
 
 function respondText (req, res) {
 	res.setHeader('Content-Type', 'text/plain')
@@ -13,7 +14,7 @@ function respondJson (req, res) {
 
 function respondNotFound (req, res) {
 	res.writeHead(404, { 'Content-Type': 'text/plain' })
-	res.end('Not Found')
+	res.end('Not Found') // function that returns to the user
 }
 
 function respondEcho (req, res) {
@@ -22,7 +23,7 @@ function respondEcho (req, res) {
 		.slice(1)
 		.join('')
 	)
-	res.setHeader('Content-Type', 'application/json')
+	res.setHeader('Content-Type', 'application/json') // setting header type to allow to send json data
 	res.end(
 		JSON.stringify({
 			normal: input,
@@ -33,12 +34,26 @@ function respondEcho (req, res) {
 	)
 }
 
+/*
+* Creates a Stream Object representing our chosen file
+* then use pipe method to connect it to the response object
+* This loads data from the file system and sends it to the client via the response
+* object
+*/
+function respondStatic (req, res) {
+	const filename = `${__dirname}/public${req.url.split('/static')[1]}`
+	fs.createReadStream(filename)
+		.on('error', () => respondNotFound(req, res))
+		.pipe(res)
+}
+
 const port = 3000
 
 const server = http.createServer( function (req, res) {
 	if (req.url === '/') return respondText(req, res)
 	if (req.url === '/json') return respondJson(req, res)
-	if (req.url.match(/^\/echo/)) return respondEcho(req, res)
+	if (req.url.match(/^\/echo/)) return respondEcho(req, res) // handles /echo endpoint
+	if (req.url.match(/^\/static/)) return respondStatic(req, res) // handles /static endpoints
 
 	respondNotFound(req, res)
 })
